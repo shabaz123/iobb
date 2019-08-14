@@ -39,7 +39,7 @@ This library supports simple I/O for beaglebone black, using C.
 The Demo directory includes some example applications for this library and circuit layouts.
 
 
-**Hotw to use :**
+**How to use :**
 
         Build libiobb.a and demo and toolkit code:
                 make
