@@ -67,6 +67,8 @@ The Demo directory includes some example applications for this library and circu
 	8. Servo Motor Demo
 	9. ADC Demo
 	10. ADC with Arduino Microphone Demo
+	11. I2C Demo
+	
 
 
 
