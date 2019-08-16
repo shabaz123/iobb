@@ -32,7 +32,7 @@ i2cfunc.o : ${LIB_PATH}i2cfunc.c ${LIB_PATH}i2cfunc.h
 	gcc -c ${LIB_PATH}i2cfunc.c -o ${LIB_PATH}i2cfunc.o
 
 install :  
-	rm /usr/local/include/BBBiolib.h
+	rm -f /usr/local/include/BBBiolib.h
 	cp ${LIB_PATH}libiobb.a /usr/local/lib
 	cp ${LIB_PATH}BBBiolib.h /usr/local/include/iobb.h
 	cp ${LIB_PATH}BBBiolib_ADCTSC.h /usr/local/include
