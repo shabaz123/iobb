@@ -20,11 +20,29 @@
 void configure_i2c_pins(char p1, char p2)
 {
   char tbuf[32];
-  sprintf(tbuf, "config-pin P9_%d i2c", p1);
-  system(tbuf);
-  sprintf(tbuf, "config-pin P9_%d i2c", p2);
-  system(tbuf);
+  if (((p1==26) && (p2==28)) || ((p2==26) && (p1==28))) // this is PocketBeagle P1 I2C
+  {
+    sprintf(tbuf, "config-pin P1_%d i2c", p1);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P1_%d i2c", p2);
+    system(tbuf);
+  }
+  else if (((p1==9) && (p2==11)) || ((p2==9) && (p1==11))) // this is PocketBeagle P2 I2C
+  {
+    sprintf(tbuf, "config-pin P2_%d i2c", p1);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P2_%d i2c", p2);
+    system(tbuf);
+  }
+  else // must be a BeagleBone Black
+  {
+    sprintf(tbuf, "config-pin P9_%d i2c", p1);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P9_%d i2c", p2);
+    system(tbuf);
+  }
 }
+
 
 int i2c_open(unsigned char bus, unsigned char addr)
 {

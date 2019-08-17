@@ -3,6 +3,7 @@
  * 
  * Revision 0.1 April 2016 shabaz
  * Revision 1.0 August 2019 shabaz
+ * Revision 1.1 August 2019 shabaz - added PocketBeagle code
  *
  * This is an I2C test program that can be used with the 
  * 3-digit LCD module design described here:
@@ -14,7 +15,12 @@
 #include <stdio.h>
 #include "i2cfunc.h"
 
-// we will use I2C2 which is enumerated as 1 on the BBB
+// set to 1 for PocketBeagle
+#define POCKETBEAGLE 0
+
+
+// we will use I2C2 which is enumerated as 2 on the BBB/PB (tested on both)
+// Set to 1 to use I2CBUS1 (not tested on BBB. tested on PB)
 #define I2CBUS 2
 
 #define LCD_ADDR 0x38
@@ -157,7 +163,32 @@ main(void)
   char_prog_t *progval;
   unsigned char mode, device, bank, blinkmode;
 
-  configure_i2c_pins(19,20);
+  printf("I2C bus selected: %d\n", I2CBUS);
+
+  if (POCKETBEAGLE)
+  {
+    printf("PocketBeagle\n");
+    if (I2CBUS==1)
+    {
+      configure_i2c_pins(9, 11); // P2 pins 9 (SCL) and 11 (SDA)
+    }
+    else if (I2CBUS==2)
+    {
+      configure_i2c_pins(28, 26); // P1 pins 28 (SCL) and 26 (SDA)
+    }
+  }
+  else
+  {
+    printf("BeagleBone\n");
+    if (I2CBUS==1)
+    {
+      printf("use other I2C bus : ) \n");
+    }
+    else if (I2CBUS==2)
+    {
+      configure_i2c_pins(19,20); // P9 pins 19 (SCL) and 20 (SDA)
+    }
+  }
   mode=0xc9; // Set static mode, display enabled, continuation enabled
   device=DEVICE_ADDR | 0x80; // Select the device, continuation enabled
   bank=BANK_CMD | 0x80 | WR_BANK_A | DISP_BANK_A; 

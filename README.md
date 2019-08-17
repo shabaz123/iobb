@@ -3,7 +3,7 @@ iobb library
 
 Beaglebone black I/O library , using Memory mapped I/O
 
-Simple C I/O library of Beaglebone black
+Simple C I/O library for Beaglebone Black and variants including PocketBeagle
 
 ============================
 Based on the work of Meng-Lun, Cai (VegetableAvenger) and Shabaz
@@ -31,6 +31,7 @@ Based on the work of Meng-Lun, Cai (VegetableAvenger) and Shabaz
 
 	V3.0	August 14 2019 - shabaz - cleaned up compiler warnings and minor changes, and
 		                 renamed to iobb
+	V3.1	August 17 2019 - shabaz - added PocketBeagle compatibility
 
 
 =============================================================================================

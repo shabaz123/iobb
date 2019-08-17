@@ -99,6 +99,8 @@
 //-------------------------------------------------------------------------
 
 void configure_spi_pins(char cs_pin, char d1_pin, char d0_pin, char clk_pin);
+void configure_spi_pins_p1(void);
+void configure_spi_pins_p2(void);
 
 int spi_transact(unsigned int McSPI_ID, unsigned int chn, unsigned int Tx_data, unsigned int *Rx_data);
 
@@ -108,6 +110,8 @@ int BBBIO_McSPI_Init() ;
 #define BBBIO_McSPI_Disable(a) BBBIO_McSPI_CLK_set(a,0,0)
 #define spi_enable(a) BBBIO_McSPI_CLK_set(a,1,0)
 #define spi_disable(a) BBBIO_McSPI_CLK_set(a,0,0)
+#define spi_enable_pb(a) BBBIO_McSPI_CLK_set(a,1,1)
+#define spi_disable_pb(a) BBBIO_McSPI_CLK_set(a,0,1)
 int BBBIO_McSPI_CLK_set(unsigned int McSPI_ID ,int enable , int idle) ;
 
 int spi_ctrl(unsigned int McSPI_ID ,

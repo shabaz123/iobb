@@ -32,6 +32,45 @@
 /* Memory mapping offset if GPIO , means the memory address of GPIOs */
 const unsigned int GPIO_AddressOffset[]={BBBIO_GPIO0_ADDR, BBBIO_GPIO1_ADDR, BBBIO_GPIO2_ADDR, BBBIO_GPIO3_ADDR};
 
+// the gpio numbers are either written as (say) gpio3_17 or as a single number like 113.
+// if they are written as a single number, then divide by 32 until there is a remainder.
+// Since there are three 32's in 113, then it is equivalent to naming it gpio3_17 where
+// 17 is the remainder.
+// The port information is represented in two arrays per header (e.g. header P8).
+// The first array stores the first part of the gpio number (e.g. the number 3 in the example
+// above. It is done for all pins in the header. Any pin which isn't a gpio (e.g. a supply
+// pin) is set to -1 in the array.
+// The second array stores the second part of the gpio number as a bit position. So,
+// for the example above, it would be 1<<17 and for any pin which isn't a gpio, the number
+// 0 is stored in the array.
+
+// PocketBeagle Port 1
+const signed char p1_PortSet[] = {-1, 2, -1,  2, -1, 0, -1, 0,
+	                          -1,  0,-1,  0, -1,-1, -1,-1,
+				  -1, -1,-1,  0, -1,-1, -1,-1,
+				  -1,  0,-1,  0,  3, 1,  3, 1,
+				   3,  0, 2,  3};
+
+const unsigned int p1_PortIDSet[]={0,  1<<23,    0,  1<<25,     0,    1<<5,  0,   1<<2,
+	                           0, 1<<3,       0, 1<<4,   0,       0,  0,      0,
+				   0,  0,         0, 1<<20,  0,       0,  0,      0,
+				   0, 1<<12,      0, 1<<13, 1<<21, 1<<11,1<<18,1<<10,
+				   1<<15,1<<26,1<<24,1<<14};
+
+// PocketBeagle Port 2
+const signed char p2_PortSet[] = { 1,  1,  0,  1,  0,  1,  0,  1,
+	                           0,  1,  0, -1, -1, -1, -1, -1,
+				   2,  1,  0,  2, -1,  1, -1,  1,
+				   1, -1,  1,  3,  0,  3,  0,  3,
+				   1,  3,  2, -1};
+
+const unsigned int p2_PortIDSet[]={1<<18, 1<<27, 1<<23, 1<<26, 1<<30, 1<<25, 1<<31, 1<<28,
+	                           1<<15, 1<<20, 1<<14,     0,     0,     0,     0,     0,
+				   1<<1,  1<<15, 1<<27, 1<<0,      0, 1<<14,     0, 1<<12,
+				   1<<9,      0, 1<<8,  1<<20, 1<<7,  1<<17, 1<<19, 1<<16,
+				   1<<13, 1<<19, 1<<22,     0};
+
+
 /* GPIO Port number set of Beaglebone Black P8 .
  * -1 as GND or VCC , Number 0/1/2 as GPIO 0/1/2
  */
@@ -82,8 +121,34 @@ volatile unsigned int *cm_per_addr = NULL;
 volatile unsigned int *cm_wkup_addr = NULL ;
 
 /* pointer to const Port set and Port ID set array */
-signed char* PortSet_ptr[2];
-unsigned int* PortIDSet_ptr[2];
+signed char* PortSet_ptr[10];
+unsigned int* PortIDSet_ptr[10];
+
+
+
+int
+sanity_check(unsigned int port, unsigned int pin)
+{
+	int param_error=0;
+	if ((port != 8) && (port != 9) && (port!=1) && (port!=2))  
+        	param_error=1;
+	if ((pin < 1 ) || (pin > 46))           // if pin over/underflow , range : 1~46
+                param_error=1;
+        if ((port==1) || (port==2))
+        {
+                if (pin>36)
+                        param_error=1;
+        }
+	if (param_error==0)
+	{
+        	if (PortSet_ptr[port][pin - 1] < 0)     // pass GND OR VCC (PortSet as -1)
+                	param_error=1;
+	}
+
+	return(param_error);
+}
+
+
 /*-----------------------------------------------------------------------------------------------
  * ********************************
  * Library Init
@@ -100,10 +165,15 @@ int iolib_init(void)
 		return -1;
 	}
 
-	PortSet_ptr[0]=(char*)p8_PortSet;
-	PortSet_ptr[1]=(char*)p9_PortSet;
-	PortIDSet_ptr[0]=(unsigned int*)p8_PortIDSet;
-	PortIDSet_ptr[1]=(unsigned int*)p9_PortIDSet;
+        PortSet_ptr[1]=(char*)p1_PortSet;
+        PortSet_ptr[2]=(char*)p2_PortSet;
+        PortIDSet_ptr[1]=(unsigned int*)p1_PortIDSet;
+        PortIDSet_ptr[2]=(unsigned int*)p2_PortIDSet;
+
+	PortSet_ptr[8]=(char*)p8_PortSet;
+	PortSet_ptr[9]=(char*)p9_PortSet;
+	PortIDSet_ptr[8]=(unsigned int*)p8_PortIDSet;
+	PortIDSet_ptr[9]=(unsigned int*)p9_PortIDSet;
 
 	/* using memory mapped I/O */
 	memh=open("/dev/mem", O_RDWR);
@@ -181,13 +251,8 @@ int iolib_setdir(char port, char pin, char dir)
 	volatile unsigned int* reg;		// GPIO register
 
 	// sanity checks
+	param_error=sanity_check(port, pin);
 	if (memh == 0)
-		param_error=1;
-	if ((port < 8) || (port > 9))		// if input is not port8 and port 9 , because BBB support P8/P9 Connector
-		param_error=1;
-	if ((pin < 1 ) || (pin > 46))		// if pin over/underflow , range : 1~46
-		param_error=1;
-	if (PortSet_ptr[port - 8][pin - 1] < 0)	// pass GND OR VCC (PortSet as -1)
 		param_error=1;
 
 	if (param_error)
@@ -198,15 +263,17 @@ int iolib_setdir(char port, char pin, char dir)
 		return(-1);
 	}
 #ifdef BBBIO_LIB_DBG
-	printf("iolib_setdir: PortSet_ptr P%d.%d , %X\n",port ,pin , PortSet_ptr[port-8][pin-1]);
+	printf("iolib_setdir: PortSet_ptr P%d.%d , %X\n",port ,pin , PortSet_ptr[port][pin-1]);
 #endif
-	reg=(void*)gpio_addr[PortSet_ptr[port-8][pin-1]] +BBBIO_GPIO_OE;
+
+
+	reg=(void*)gpio_addr[PortSet_ptr[port][pin-1]] +BBBIO_GPIO_OE;
 
 	if (dir == BBBIO_DIR_OUT) {
-		*reg &= ~(PortIDSet_ptr[port-8][pin-1]);
+		*reg &= ~(PortIDSet_ptr[port][pin-1]);
 	}
 	else if (dir == BBBIO_DIR_IN) {
-		*reg |= PortIDSet_ptr[port-8][pin-1];
+		*reg |= PortIDSet_ptr[port][pin-1];
 	}
 
 	return(0);
@@ -214,22 +281,22 @@ int iolib_setdir(char port, char pin, char dir)
 /* ----------------------------------------------------------------------------------------------- */
 void pin_high(char port, char pin)
 {
-	*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port-8][pin-1]]+BBBIO_GPIO_SETDATAOUT)) = PortIDSet_ptr[port-8][pin-1];
+	*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port][pin-1]]+BBBIO_GPIO_SETDATAOUT)) = PortIDSet_ptr[port][pin-1];
 }
 /* ----------------------------------------------------------------------------------------------- */
 void pin_low(char port, char pin)
 {
-	*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port-8][pin-1]]+BBBIO_GPIO_CLEARDATAOUT)) = PortIDSet_ptr[port-8][pin-1];
+	*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port][pin-1]]+BBBIO_GPIO_CLEARDATAOUT)) = PortIDSet_ptr[port][pin-1];
 }
 /* ----------------------------------------------------------------------------------------------- */
 char is_high(char port, char pin)
 {
-	return ((*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port-8][pin-1]]+BBBIO_GPIO_DATAIN)) & PortIDSet_ptr[port-8][pin-1])!=0);
+	return ((*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port][pin-1]]+BBBIO_GPIO_DATAIN)) & PortIDSet_ptr[port][pin-1])!=0);
 }
 /* ----------------------------------------------------------------------------------------------- */
 char is_low(char port, char pin)
 {
-	return ((*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port-8][pin-1]]+BBBIO_GPIO_DATAIN)) & PortIDSet_ptr[port-8][pin-1])==0);
+	return ((*((unsigned int *)((void *)gpio_addr[PortSet_ptr[port][pin-1]]+BBBIO_GPIO_DATAIN)) & PortIDSet_ptr[port][pin-1])==0);
 }
 /* ----------------------------------------------------------------------------------------------- */
 int iolib_delay_ms(unsigned int msec)
@@ -544,13 +611,14 @@ int BBBIO_sys_pinmux_check(unsigned int port, unsigned int pin, unsigned int Cfl
 	unsigned int Cflag_tmp ;
 
 	// sanity checks
+	if (port<=2)
+	{
+		printf("BBBIO_sys_pin_mux_check : error, needs porting for PocketBeagle!\n");
+	}
+	if (sanity_check(port, pin)==1)
+		goto PARAM_ERROR ;
+
 	if (memh == 0)
-		goto PARAM_ERROR ;
-	if ((port < 8) || (port > 9))               // if input is not port8 and port 9 , because BBB support P8/P9 Connector
-		goto PARAM_ERROR ;
-	if ((pin < 1) || (pin > 46))                // if pin over/underflow , range : 1~46
-		goto PARAM_ERROR ;
-	if (PortSet_ptr[port - 8][pin - 1] < 0)   	// pass GND OR VCC (PortSet as -1)
 		goto PARAM_ERROR ;
 
 	port -= 8;
@@ -623,14 +691,10 @@ int  BBBIO_sys_Enable_Debouncing(unsigned int port ,unsigned int pin ,unsigned i
 					    BBBIO_CM_PER_GPIO3_CLKCTRL};
 
         // sanity checks
+	param_error=sanity_check(port, pin);
         if (memh==0)
             param_error=1;
-        if ((port<8) || (port>9))               // if input is not port8 and port 9 , because BBB support P8/P9 Connector
-            param_error=1;
-        if ((pin<1) || (pin>46))                // if pin over/underflow , range : 1~46
-            param_error=1;
-        if (PortSet_ptr[port - 8][pin - 1]<0)   // pass GND OR VCC (PortSet as -1)
-            param_error=1;
+
 	if(GDB_time >255)
 	    param_error=1;
 
@@ -640,7 +704,6 @@ int  BBBIO_sys_Enable_Debouncing(unsigned int port ,unsigned int pin ,unsigned i
 #endif
 		return -1 ;
 	}
-	port -= 8;
 	pin -= 1;
 
         /* Enable GPIO1 GDBCLK */
@@ -688,14 +751,9 @@ int  BBBIO_sys_Disable_Debouncing(unsigned int port ,unsigned int pin ,unsigned 
                                             BBBIO_CM_PER_GPIO2_CLKCTRL ,
                                             BBBIO_CM_PER_GPIO3_CLKCTRL};
 
-        // sanity checks
+	// sanity checks
+	param_error=sanity_check(port, pin);
         if (memh == 0)
-            param_error = 1;
-        if ((port < 8) || (port > 9))	/* if input is not port8 and port 9 , because BBB support P8/P9 Connector */
-            param_error = 1;
-        if ((pin < 1) || (pin > 46))	/* if pin over/underflow , range : 1~46 */
-            param_error = 1;
-        if (PortSet_ptr[port - 8][pin - 1] < 0)   /* pass GND OR VCC (PortSet as -1) */
             param_error = 1;
         if(GDB_time > 255)
             param_error = 1;
@@ -706,7 +764,6 @@ int  BBBIO_sys_Disable_Debouncing(unsigned int port ,unsigned int pin ,unsigned 
 #endif
 		return -1 ;
         }
-        port -= 8;
         pin -= 1;
 
 	/* Disable Debouncing */
@@ -954,9 +1011,9 @@ int BBBIO_GPIO_set_dir(unsigned int  gpio, unsigned int inset , unsigned int out
  *
  *      Warring : if you nedd this function , please check value you input , or it may effect other chip or device .
  */
+// NOTE: these functions are not PocketBeagle checked! Need to verify them.
 
-
-// BBBIO_GPIO_SAFE_MASK exporess the usable gpio in BBB Expansion Header P8 and P9 .
+// BBBIO_GPIO_SAFE_MASK expresses the usable gpio in BBB Expansion Header P8 and P9 .
 // and mask the BBBIO_GPIO_high and BBBIO_GPIO_low to avoid the error access of the pin which not in P8 and P9 .
 const unsigned int BBBIO_GPIO_SAFE_MASK [] ={
 1<< 2 | 1<<3 | 1<<4 | 1<<5 | 1<<7 | 1<<8 | 1<<9 | 1<<10 | 1<<11 | 1<<12 | 1<<13 | 1<<14 | 1<<15 | 1<<20 | 1<<22 | 1<<23 | 1<<26 | 1<<27 | 1<<30 | 1<<31,        // GPIO 0

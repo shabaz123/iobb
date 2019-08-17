@@ -7,7 +7,7 @@ LAB_PATH = ./Lab/
 
 LIBRARIES = iobb
 
-all : libiobb.a LED ADT7301 SEVEN_SCAN SMOTOR LED_GPIO DEBOUNCING 4x4keypad ADC ADC_VOICE GPIO_STATUS EP_STATUS ADC_CALC lcd3-test test-outputs
+all : libiobb.a LED ADT7301 SEVEN_SCAN SMOTOR LED_GPIO DEBOUNCING 4x4keypad ADC ADC_VOICE GPIO_STATUS EP_STATUS ADC_CALC lcd3-test test-outputs pb-test-outputs test-inputs pb-test-inputs
 
 libiobb.a : ${LIB_PATH}BBBiolib.c ${LIB_PATH}BBBiolib.h BBBiolib_PWMSS.o BBBiolib_McSPI.o BBBiolib_ADCTSC.o i2cfunc.o
 	gcc -c ${LIB_PATH}BBBiolib.c -o ${LIB_PATH}BBBiolib.o
@@ -50,8 +50,14 @@ install :
 test-outputs: test-io/test-outputs.c libiobb.a
 	gcc -o test-outputs test-io/test-outputs.c -I. -L. -liobb
 
+pb-test-outputs: test-io/pb-test-outputs.c libiobb.a
+	gcc -o pb-test-outputs test-io/pb-test-outputs.c -I. -L. -liobb
+
 test-inputs: test-io/test-inputs.c libiobb.a
 	gcc -o test-inputs test-io/test-inputs.c -I. -L. -liobb
+
+pb-test-inputs: test-io/pb-test-inputs.c libiobb.a
+	gcc -o pb-test-inputs test-io/pb-test-inputs.c -I. -L. -liobb
 
 LED : ${DEMO_PATH}Demo_LED/LED.c libiobb.a
 	gcc -o LED ${DEMO_PATH}Demo_LED/LED.c -L ${LIB_PATH} -liobb
@@ -124,5 +130,5 @@ VD : ${LAB_PATH}Voice_Door/voice_door.cpp libiobb.a
 
 .PHONY: clean
 clean :
-	rm -rf ${LIB_PATH}*.o ${LIB_PATH}libiobb.a libiobb.a iobb.h BBBiolib_ADCTSC.h BBBiolib_McSPI.h i2cfunc.h lcd3-test test-inputs test-outputs BBBiolib_PWMSS.h LED ADT7301 GPIO_CLK_status SevenScan Ultrasonic28015 TMP SMOTOR LED_GPIO Debouncing 4x4keypad EP_status PWM RA ADXL345 ADC ADC_CALC L3G4200D
+	rm -rf ${LIB_PATH}*.o ${LIB_PATH}libiobb.a libiobb.a iobb.h BBBiolib_ADCTSC.h BBBiolib_McSPI.h i2cfunc.h lcd3-test test-inputs pb-test-inputs test-outputs pb-test-outputs BBBiolib_PWMSS.h LED ADT7301 GPIO_CLK_status SevenScan Ultrasonic28015 TMP SMOTOR LED_GPIO Debouncing 4x4keypad EP_status PWM RA ADXL345 ADC ADC_CALC L3G4200D
 

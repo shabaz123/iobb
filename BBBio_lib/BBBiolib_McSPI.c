@@ -98,18 +98,54 @@ static inline unsigned int read_reg(volatile void *reg_base ,unsigned int offset
 }
 /* ----------------------------------------------------------------------------------------------- */
 
+// PocketBeagle SPI0 on connector P1
+void configure_spi_pins_p1(void)
+{
+  configure_spi_pins(6, 12, 10, 8);
+}
+
+void configure_spi_pins_p2(void)
+{
+  configure_spi_pins(31, 25, 27, 29);
+}
 
 void configure_spi_pins(char cs_pin, char d1_pin, char d0_pin, char clk_pin)
 {
   char tbuf[32];
-  sprintf(tbuf, "config-pin P9_%d spi_cs", cs_pin);
-  system(tbuf);
-  sprintf(tbuf, "config-pin P9_%d spi", d1_pin);
-  system(tbuf);
-  sprintf(tbuf, "config-pin P9_%d spi", d0_pin);
-  system(tbuf);
-  sprintf(tbuf, "config-pin P9_%d spi_sclk", clk_pin);
-  system(tbuf);
+
+  if (clk_pin==8) // this is PocketBeagle P1 SPI0
+  {
+    sprintf(tbuf, "config-pin P1_%d spi_cs", cs_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P1_%d spi", d1_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P1_%d spi", d0_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P1_%d spi_sclk", clk_pin);
+    system(tbuf);
+  }
+  else if (clk_pin==29) // this is PocketBeagle P2 SPI1
+  {
+    sprintf(tbuf, "config-pin P2_%d spi_cs", cs_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P2_%d spi", d1_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P2_%d spi", d0_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P2_%d spi_sclk", clk_pin);
+    system(tbuf);
+  }
+  else // must be BeagleBone Black
+  {
+    sprintf(tbuf, "config-pin P9_%d spi_cs", cs_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P9_%d spi", d1_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P9_%d spi", d0_pin);
+    system(tbuf);
+    sprintf(tbuf, "config-pin P9_%d spi_sclk", clk_pin);
+    system(tbuf);
+  }
 }
 
 
@@ -272,6 +308,7 @@ int spi_ctrl(unsigned int SPI_ID ,		/* SPI module ID , am335x have SPI1 and SPI0
 }
 /* ----------------------------------------------------------------------------------------------- */
 /* Beaglebone Black , SPI Expansion Header Mode Check */
+// Not PocketBeagle friendly : ( Needs an overhaul.
 int BBBIO_McSPI_EP_check(unsigned int SPI_ID)
 {
 	unsigned int ret = 1;
@@ -330,10 +367,23 @@ int BBBIO_McSPI_CLK_set(unsigned int SPI_ID ,int enable , int idle)
 		return 0 ;
 	}
 
-	/* pin mux check */
-	if(!BBBIO_McSPI_EP_check(SPI_ID)) {
-		printf("BBBIO_McSPI_CLK_set: No effect pin mux Detected of SPI-%d ,Please use EP_STATUS toolkit to check Pin mux mode\n", SPI_ID);
-		return 0;
+	if (idle==0)
+	{
+		/* pin mux check */
+		if(!BBBIO_McSPI_EP_check(SPI_ID)) {
+			printf("BBBIO_McSPI_CLK_set: No effect pin mux Detected of SPI-%d ,Please use EP_STATUS toolkit to check Pin mux mode\n", SPI_ID);
+			return 0;
+		}
+	}
+	else if (idle==1)
+	{
+		// don't do the EP check if idle is 1. Because the EP check
+		// (Expansion Port) only works for BeagleBone. It needs updating
+		// for PocketBeagle.
+	}
+	else
+	{
+		//
 	}
 
 	if(enable) {
